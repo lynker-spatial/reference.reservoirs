@@ -1,0 +1,6 @@
+﻿Variable,Unit,Unit Text,Time Period,Parameter
+IN,ms,cubic meters per second,Daily,Reservoir Inflow
+STOR,MCM,Million Cubic Meters,Daily,Reservoir Storage
+ELE,m,meters,Daily,Reservoir Elevation
+OUT,ms,cubic meters per second,Daily,Reservoir Outflow
+EVAP,MCM,million cubic meters,Daily,Reservoir Evaporation

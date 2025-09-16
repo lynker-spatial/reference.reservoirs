@@ -1,0 +1,8 @@
+﻿Variable,Meaning
+Agency_Code,Unique code for each agency which can be traced back to time_series_inventory.csv in case there are specific questions about where the data came from.
+Agency_Name,"Agency name and, where applicable, district name so that data can be traced back to the individual districts. For DUKE, this is a data repository created by Dr. Patterson et al, 2019 and does not directly correspond to an agency. "
+Data_Disclaimers,Disclaimers on data use provided directly by the agency.
+Inflow/Outflow ,"This columns tells if inflow and/or outflow were aggregated from multiple sources spatially, aggregated using a different time step (i.e. hourly to daily) or if they were given as real time values in a daily format."
+Additional_Data_Notes,Any additional notes for the processing or the use of the data as provided by the agency.
+Acces_ Date,Date when the data was last accessed.
+Access_Type,"Personal communication denotes that the data came from a FOIA request or email, while website download gives the website where data was downloaded."

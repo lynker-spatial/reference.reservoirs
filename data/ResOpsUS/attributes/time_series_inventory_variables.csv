@@ -1,0 +1,18 @@
+﻿Variable,Meaning
+DAM_ID,"ID for the dam which can be linked to time series file, the attributes and the Global Reservoirs and Dams dataset created by Lehner et al 2011"
+STORAGE,"Binary to depict if data exists for this variable. 1 indicates that there is data, while a 0 indicates that there is no data."
+STORAGE_START,Earliest date that there is storage data for this dam.
+STORAGE_END,Last date that there is storage data for this dam.
+DATA_SOURCE,"The data source of this variable. Note that data source means the same thing for inflow, outflow, elevation, evaporation and storage. The data source is also not consistent across one dam in cases where there was a longer period of record or a more complete period of record from a different data source. An NA means that no data exists. "
+INFLOW,"Binary to depict if data exists for this variable. 1 indicates that there is data, while a 0 indicates that there is no data."
+INFLOW_START,Earliest date that there is inflow data for this dam. An NA means that no data exists. 
+INFLOW_END,Last date that there is inflow data for this dam. An NA means that no data exists. 
+OUTFLOW,Earliest date that there is outflow data for this dam. An NA means that no data exists. 
+OUTFLOW_END,Last date that there is outflow data for this dam. An NA means that no data exists. 
+ELEVATION_START ,Earliest date that there is elevation data for this dam. An NA means that no data exists. 
+ELEVATION_END,Last date that there is elevation data for this dam. An NA means that no data exists. 
+EVAPORATION_START,Earliest date that there is evaporation data for this dam. An NA means that no data exists. 
+EVAPORATION_END,Last date that there is evaporation data for this dam. An NA means that no data exists. 
+OUTFLOW,"Binary to depict if data exists for this variable. 1 indicates that there is data, while a 0 indicates that there is no data."
+ELEVATION,"Binary to depict if data exists for this variable. 1 indicates that there is data, while a 0 indicates that there is no data."
+EVAPORATION,"Binary to depict if data exists for this variable. 1 indicates that there is data, while a 0 indicates that there is no data."

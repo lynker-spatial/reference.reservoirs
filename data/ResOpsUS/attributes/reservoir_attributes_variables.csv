@@ -1,0 +1,8 @@
+Variable,Meaning
+DAM_ID,"Unique DAM_ID for each dam that links reservoir_attributes.csv to time_series_inventory.csv as well as the individual time series files in the time_series folder. In most cases it is equal to the GRAND_ID from the Global Reservoirs and Dams Dataset produced by Lehner et al, 2011."
+DAM_NAME,Name of the dam that corresponds to the GRAND_ID from Lehner et al. 2011.
+STATE,State where the dam is located.
+LONG,The longitude of the dam's location.
+LAT,The latitude of the dam's location.
+TIME_SERIES_START,The initial starting date of the time series data for this dam.
+TIME_SERIES_END,The final date of the time series data for this dam.
