@@ -170,13 +170,12 @@ map.once("load", async () => {
     });
 
     for (const layer of tiles_layers) {
-        // @ts-expect-error: tiles_paint will work, but TS does not like it.
         map.addLayer({
             id: "default",
             source: "default",
             "source-layer": layer,
-            type: tiles_paint[layer].type,
-            paint: tiles_paint[layer].paint
+            // @ts-expect-error: tiles_paint will work, but TS does not like it.
+            ...tiles_paint[layer]
         });
         
         console.log(`Added layer: ${layer}`);
