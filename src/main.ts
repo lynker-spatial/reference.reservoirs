@@ -20,39 +20,6 @@ const tiles_layers = [
     "reference-reservoirs"
 ] as const;
 
-// Some types to help with auto complete
-type Layer = typeof tiles_layers[number];
-type PaintSpecification = Pick<maplibregl.AddLayerObject, "type"> & Pick<maplibregl.LayerSpecification, "paint">
-type TilePaintSpecification = Record<Layer, PaintSpecification>;
-
-// Paint specification for the tiles layer
-const tiles_paint: TilePaintSpecification = {
-    "reference-reservoirs": {
-        type: "circle",
-    paint: {
-      // Circle radius scales smoothly with zoom
-      "circle-radius": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        4, 2.5,
-        8, 4,
-        12, 7
-      ],
-
-      // Strong but neutral dam color
-      "circle-color": "#8B4513", // saddle brown
-
-      // White outline for visibility against any background
-      "circle-stroke-color": "white",
-      "circle-stroke-width": 1.2,
-
-      // Slight transparency so clusters of dams don't overpower the map
-      "circle-opacity": 0.85
-    }
-  }
-}
-
 /**
  * Format text for a popup given a feature.
  * @param _root The root DOM element (typically a <span> in this case).
@@ -169,18 +136,34 @@ map.once("load", async () => {
         attribution: '&copy; <a href="https://www.lynker-spatial.com" target="_blank" rel="noopener">Lynker Spatial</a>'
     });
 
-    for (const layer of tiles_layers) {
-        map.addLayer({
-            id: "default",
-            source: "default",
-            "source-layer": layer,
-            // @ts-expect-error: tiles_paint will work, but TS does not like it.
-            ...tiles_paint[layer]
-        });
-        
-        console.log(`Added layer: ${layer}`);
-    }
+    map.addLayer({
+        id: "default",
+        source: "default",
+        "source-layer": tiles_layers[0],
+        type: "circle",
+        paint: {
+      // Circle radius scales smoothly with zoom
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        4, 2.5,
+        8, 4,
+        12, 7
+      ],
 
+      // Strong but neutral dam color
+      "circle-color": "#8B4513", // saddle brown
+
+      // White outline for visibility against any background
+      "circle-stroke-color": "white",
+      "circle-stroke-width": 1.2,
+
+      // Slight transparency so clusters of dams don't overpower the map
+      "circle-opacity": 0.85
+    } 
+    })
+        
     map.on("click", "default", popupEvent);
     map.on("mouseenter", "default", mouseEnterEvent)
     map.on("mousemove", "default", mouseMoveEvent);

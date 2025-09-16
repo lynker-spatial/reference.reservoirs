@@ -73,34 +73,11 @@ Our goal is to build a **harmonized set of reference reservoirs (proxied by dams
 
 ```{r load-outputs, eval = TRUE}
 # stitched outputs (written by the runner)
-"../refe"
-res_csv  <- "output/dam_matches_conus.csv"
-res_rds  <- "output/dam_matches_conus.rds"
-manifest <- "output/tiles_manifest.csv"
+res_rds  <- "output/reference-reservoirs.rds"
 
-if (file.exists(res_rds)) {
-  res <- readRDS(res_rds)
-} else if (file.exists(res_csv)) {
-  res <- readr::read_csv(res_csv, show_col_types = FALSE)
-} else {
-  stop("No stitched outputs found. Run the pipeline first.")
-}
-
-# Ensure expected columns exist
-needed_cols <- c("dam_id","dam.name","X","Y","tile_id",
-                 "realization","realization_id","realization_snap_m","realization_jw",
-                 "nid_offset_m","nid_flag_large_offset_500m","n",
-                 "gnis","resops","goodd","nwm","osm_ww_poly","osm_ww_lines",
-                 "osm_dam_lines","ref_fab_fp","ref_fab_wb","ref_int","osm_int","nid")
-for (nm in setdiff(needed_cols, names(res))) res[[nm]] <- NA
-
-# Spatial version for quick maps
-res_sf <- tryCatch(
-  { sf::st_as_sf(res, coords = c("X","Y"), crs = 5070, remove = FALSE) },
-  error = function(e) { message("Could not build sf from X/Y — maps will be limited."); NULL }
-)
-
-man <- if (file.exists(manifest)) readr::read_csv(manifest, show_col_types = FALSE) else NULL
+res <- readRDS(res_rds) |>
+  dplyr::filter(!is.na(X)) |> 
+  sf::st_as_sf(coords = c("X","Y"), crs = 5070, remove = FALSE) 
 ```
 
 ---
@@ -114,12 +91,12 @@ CONUS is divided into \~**100 km** cells. We process only tiles that intersect d
 ```{r quick-map, eval = TRUE}
 source("R/utils_fin.R")
 conus <- AOI::aoi_get(state = "conus") |> st_transform(5070)
-dam_pts <- st_as_sf(filter(res, !is.na(X)), coords = c("X", "Y"), crs = 5070, remove = FALSE)
+
 
 tiles <- make_conus_grid(st_union(conus), cell_km = 100)  
-if (!is.null(res_sf)) {
+if (!is.null(res)) {
   ggplot2::ggplot() +
-    ggplot2::geom_sf(data = dam_pts, alpha = 0.15, size = 0.25) +
+    ggplot2::geom_sf(data = res, alpha = 0.15, size = 0.25) +
     ggplot2::geom_sf(data = tiles, fill = NA, color = "brown", size = 0.2) +
     ggplot2::labs(title = "Reservoirs", subtitle = "EPSG:5070",
          x = NULL, y = NULL) +

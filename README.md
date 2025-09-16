@@ -86,8 +86,6 @@ original NID point.
 
 ## **Bring Your Own.**: The method is extensible so that anyone can add a dataset by specifying a unique ID, search radius, and rank weight; it will be harmonized with the principal data resources.
 
-    #> [1] "../refe"
-
 ------------------------------------------------------------------------
 
 ## Process Overview
