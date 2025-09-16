@@ -1,0 +1,217 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# Reservoir Alignment: Multi-Context Reconciliation
+
+**Authors: Mike Johnson** + Lynker Spatial Team
+
+## Narrative
+
+Accurate reservoir locations are essential for hydrologic modeling
+because reservoirs alter the natural flow regime by **storing,
+releasing, and redistributing** water across space and time. These
+operations directly influence downstream streamflow, flood peaks,
+drought severity, water availability, and ecosystem conditions. Today’s
+NWM only accounts for ~500 reservoirs across CONUS, which is incomplete
+for many forecasting and planning applications. To extend the scope of
+reservoir locations, data from other resources is needed.
+
+The National Inventory of Dams (NID) provides broad **coverage** but
+variable **location** quality (on-reservoir, on-flowline, generalized,
+sometimes wrong). Even small positional errors can misconnect a
+dam/reservoir to the wrong flowline or waterbody, degrading routing of
+inflows/outflows and reducing model skill for discharge, storage, and
+evapotranspiration—undermining flood forecasting, drought planning, and
+environmental flow assessments.
+
+Other datasets often have better **locations** but are incomplete or
+inconsistent in other ways particularly with spatial coverage.
+Critically, each dataset also opens doors for **data assimilation**,
+**parameterization**, and **ML training** on historic time series. By
+grounding our reference reservoirs with precise geographic **contexts**
+and aligning to a shared hydrographic fabric, we get regulated flow
+representation that better reflects the coupled human–natural water
+cycle and is a boon to community efforts like those at **Geoconnex** and
+as **NOAA/NWS POIs** in the NWM.
+
+Our goal is to build a **harmonized set of reference reservoirs (proxied
+by dams)** that are geospatially consistent with the hydrofabric used in
+USGS and NOAA/NWS modeling. We treat NID as the **global set** to
+validate and enrich, assign stable synthetic IDs (`dam_id = "ls-*"`),
+and use multiple contexts to correct locations and enhance attributes.
+
+**Strategy (evidence aggregation):**
+
+- build candidate pairs via spatial proximity within tuned **per-context
+  radii**,
+- compute **name similarity** (Jaro–Winkler) from cleaned strings
+- **rank** contexts by reliability and derived evidence,
+- select a **best realization** per dam, with diagnostics.
+
+**Per-dam output:** A chosen realization (context + ID), snap distance
+(m), name similarity, number of supporting contexts, and offset from the
+original NID point.
+
+------------------------------------------------------------------------
+
+## Inputs
+
+- **NID (cleaned, EPSG:5070, synthetic IDs `dam_id = "ls-*"`).**
+  Baseline catalog (USACE). High inclusivity; variable positional
+  accuracy. Synthetic IDs provide stable tracking.
+
+- **Lynker Spatial hydrofabric flowlines (`ref_fab_fp`) + waterbodies
+  (`ref_fab_wb`).** National hydrographic backbone (v2.3). Consistent
+  topology for flowlines and waterbodies aligned to modeling needs.
+
+- **OpenStreetMap (OSM): water polygons, water lines, dam lines.**
+  Volunteer geographic data adding local detail; quality and coverage
+  vary regionally.
+
+- **GNIS.** USGS naming authority for natural/cultural features (dams,
+  lakes, reservoirs), used for robust naming comparisons.
+
+- **ResOpsUS.** Reservoir operations and attributes useful for modeling
+  and water management.
+
+- **HILARRI.** Curated links among NID (2024), GRanD (v1.3), and EHA
+  (2024), connecting dams, reservoirs, and hydropower plants (ORNL/DOE).
+
+- **GOODD.** Global dam compilation (\>38k) with attributes supporting
+  large-scale analyses.
+
+- **NWM (optionally re-linked to WB IDs).** NOAA’s hydrologic modeling
+  system. Reservoir POIs can be re-indexed to hydrofabric WBs to improve
+  geometric alignment.
+
+## **Bring Your Own.**: The method is extensible so that anyone can add a dataset by specifying a unique ID, search radius, and rank weight; it will be harmonized with the principal data resources.
+
+    #> [1] "../refe"
+
+------------------------------------------------------------------------
+
+## Process Overview
+
+### Tiling
+
+CONUS is divided into ~**100 km** cells. We process only tiles that
+intersect dams. Each tile runs independently (bounded memory; smaller
+candidate pools). Per-tile results are written to RDS; a final pass
+stitches tiles, resolving overlaps by preferring **more supporting
+contexts (`n`)** then **closer snaps**.
+
+<img src="man/figures/README-quick-map-1.png" width="75%" />
+
+### NID as Core Context
+
+The **NID** defines the **global set** we validate, supplement, and
+standardize. Because NID IDs can be duplicated and locations imprecise,
+we assign **stable synthetic IDs** (`dam_id = ls-*`) and treat NID like
+any other context in scoring—*but* privileged as the anchor. Outputs
+retain NID identifiers while updated coordinates, names, and attributes
+can be adopted from the **best realization** across contexts. This
+preserves continuity with the most complete inventory while
+systematically improving accuracy via GNIS names, GOODD’s footprint,
+hydrofabric topology, and OSM detail—producing features that are
+**Geoconnex-ready** and compatible with **NWS POIs**.
+
+### Context Definition
+
+A **context** is an external dataset/layer (e.g., `gnis`, `goodd`,
+`ref_fab_fp`, `osm_ww_poly`) against which NID dams are compared. For
+each dam and context, we:
+
+1.  generate **candidate pairs** within a tuned **search radius**,
+2.  compute **snap distance** and **name similarity (JW)**, and
+3.  **filter/rank** to a single best match per (dam, context).
+
+Two **derived** contexts are also created by intersecting waterbodies
+and flowlines in each data family:
+
+- `ref_int`: intersections of **ref_fab_wb × ref_fab_fp**
+- `osm_int`: intersections of **osm_ww_poly × osm_ww_lines**
+
+These provide strong geometry/topology anchors.
+
+### Ranking Policy
+
+- **0 – Intersection evidence:** `ref_int`, `osm_int` (geometry +
+  topology; strongest).
+- **1 – Curated/named:** `gnis`, `resops`, `goodd`, `osm_dam_lines`,
+  `hillari`.
+- **2 – Direct/core geometries:** `osm_ww_poly`, `osm_ww_lines`,
+  `ref_fab_fp`, `ref_fab_wb`, `nwm` (re-linked), `nid`.
+- **Tributary penalty:** if `river` implies TR/OS/TRIB, add **+5** to
+  rank. Within any tier, **smaller snap** and **smaller JW** win.
+
+### Process
+
+1.  **Per tile**
+
+    1.  Load dams (NID) and clip contexts.
+    2.  Build **representative points** per context: points (identity),
+        lines (midpoints/endpoints), polygons (point-on-surface).
+    3.  Generate candidates via **`st_is_within_distance`** (per-context
+        radius) with a **KNN fallback** gated by the same radius.
+    4.  Score (snap distance, JW), apply tributary penalty; **reduce to
+        best per (dam, context)**.
+    5.  Build a **wide table** of IDs (one column per context), select
+        **best realization** per dam, compute **QA** (offset from NID),
+        and distance to flowpath.
+    6.  Write **tile RDS** and append a **manifest row**.
+
+### Contexts: Search Distance & Rank Priority
+
+| Context | Search Distance (m) | Rank | Group | Notes |
+|----|----|----|----|----|
+| ref_int | 2000 | 0 | Anchors / Derived | Intersections of ref_fab_wb × ref_fab_fp; highest-confidence geometry. |
+| osm_int | 2000 | 0 | Anchors / Derived | Intersections of osm_ww_poly × osm_ww_lines; strong topology signal. |
+| gnis | 2000 | 1 | Curated / Named | USGS names; authoritative nomenclature, variable location quality. |
+| resops | 2000 | 1 | Curated / Named | Reservoir ops/attributes useful for modeling. |
+| osm_dam_lines | 1500 | 1 | Curated / Named | OSM dam features; coverage varies. |
+| hillari | 2000 | 1 | Curated / Named | Links dams–reservoirs–plants (ORNL/DOE). |
+| goodd | 2000 | 1 | Curated / Named | Global dam footprint/attributes. |
+| osm_ww_lines | 1500 | 2 | Direct / Network | Dense/noisy; short radius reduces false hits. |
+| osm_ww_poly | 1500 | 2 | Direct / Network | Strong geometric anchors for reservoirs. |
+| ref_fab_fp | 1500 | 2 | Direct / Fabric | Topologically consistent flowlines. |
+| ref_fab_wb | 2000 | 2 | Direct / Fabric | Waterbodies as spatial anchors. |
+| nwm | 2000 | 2 | Direct / POIs | Often mislocated; improved when re-indexed to WBs. |
+| nid | 2000 | 2 | Core Dataset | Baseline set for validation & enrichment; stable synthetic IDs. |
+
+------------------------------------------------------------------------
+
+## Risks & Mitigations
+
+| Risk / Complexity | Why it matters | Mitigation in this workflow |
+|----|----|----|
+| Mis-snap to wrong flowline/waterbody | Broken routing; bad inflow/outflow accounting | Per-context radii; intersections (`ref_int`/`osm_int`); rank 0 |
+| Duplicate/ambiguous IDs & names | Double-counting or missed joins | Synthetic `dam_id`, string prep + JW, cross-context tallies `n` |
+| Noisy/shifted geometries (esp. NWM, NID) | High false positives; unstable matches | Rep points, short radii (750 m), KNN fallback within same gate |
+| Seasonal shoreline changes | Point-on-surface drift vs. dam location | Prefer dam-aligned contexts; intersections; multi-context voting |
+| Tile edge effects | Missed candidates near boundaries | Buffered tile search; global stitch preferring `n` then distance |
+| Nonstationarity / updates over time | Drift between versions; reproducibility | Tile manifests, context IDs, rank map documented |
+| Licensing & attribution (OSM) | Compliance and redistribution | Keep source IDs/contexts; document license provenance |
+
+## Appendix: Version 1.0 plots
+
+<img src="man/figures/README-stub-metrics-1.png" width="75%" /><img src="man/figures/README-stub-metrics-2.png" width="75%" /><img src="man/figures/README-stub-metrics-3.png" width="75%" />
+
+<img src="man/figures/README-stub-by-context-1.png" width="75%" />
+
+## Use:
+
+- To use this repo, all data is stored wit the exception of OSM. All
+  data - including OSM - can be downloaded with the direction in the
+  `data/data_prep.R`.
+
+- Run `workflow/01_process_tiles.R` If new resources are added, be sure
+  to include them in the ingest as well as provide a rank and radius
+
+- `02_stich.R` stitches the tiles together and adds preliminary info
+
+- `03_ops.R` adds reservoir parameters needd for RFC-DA in the NWM using
+  a mix of traits.
+
+- If you want to recreate the webmap, run the make file in scripts/tiles
+  using the latest gpkg. Output can be viewed with
+  `pnpm dev --strictPort --port 8000`

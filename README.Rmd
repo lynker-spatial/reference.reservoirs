@@ -1,20 +1,28 @@
 ---
-title: "Reservoir Alignment: Multi-Context Reconciliation"
-output:
-github_document: default
-html_document:
-  toc: true
-  toc_depth: 3
-  number_sections: true
+output: github_document
 ---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "75%"
+)
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.width = 7, fig.height = 5)
 ```
 
-## Narrative
+# Reservoir Alignment: Multi-Context Reconciliation
 
-Authors: **Mike Johnson** + Lynker Spatial Team
+**Authors: Mike Johnson** + Lynker Spatial Team
+
+
+## Narrative
 
 Accurate reservoir locations are essential for hydrologic modeling because reservoirs alter the natural flow regime by **storing, releasing, and redistributing** water across space and time. These operations directly influence downstream streamflow, flood peaks, drought severity, water availability, and ecosystem conditions. Today’s NWM only accounts for \~500 reservoirs across CONUS, which is incomplete for many forecasting and planning applications. To extend the scope of reservoir locations, data from other resources is needed. 
 
