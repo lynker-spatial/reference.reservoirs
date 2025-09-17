@@ -13,10 +13,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE, fig.width = 7, fig.height = 5)
-```
-
 # Reservoir Alignment: Multi-Context Reconciliation
 
 **Authors: Mike Johnson** + Lynker Spatial Team
@@ -91,9 +87,8 @@ CONUS is divided into \~**100 km** cells. We process only tiles that intersect d
 ```{r quick-map, eval = TRUE}
 source("R/utils_fin.R")
 conus <- AOI::aoi_get(state = "conus") |> st_transform(5070)
-
-
 tiles <- make_conus_grid(st_union(conus), cell_km = 100)  
+
 if (!is.null(res)) {
   ggplot2::ggplot() +
     ggplot2::geom_sf(data = res, alpha = 0.15, size = 0.25) +

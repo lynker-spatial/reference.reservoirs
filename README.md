@@ -86,6 +86,15 @@ original NID point.
 
 ## **Bring Your Own.**: The method is extensible so that anyone can add a dataset by specifying a unique ID, search radius, and rank weight; it will be harmonized with the principal data resources.
 
+``` r
+# stitched outputs (written by the runner)
+res_rds  <- "output/reference-reservoirs.rds"
+
+res <- readRDS(res_rds) |>
+  dplyr::filter(!is.na(X)) |> 
+  sf::st_as_sf(coords = c("X","Y"), crs = 5070, remove = FALSE) 
+```
+
 ------------------------------------------------------------------------
 
 ## Process Overview
@@ -97,6 +106,28 @@ intersect dams. Each tile runs independently (bounded memory; smaller
 candidate pools). Per-tile results are written to RDS; a final pass
 stitches tiles, resolving overlaps by preferring **more supporting
 contexts (`n`)** then **closer snaps**.
+
+``` r
+source("R/utils_fin.R")
+#> Warning in fun(libname, pkgname): GEOS versions differ: lwgeom has 3.11.0 sf
+#> has 3.14.0
+#> Warning in fun(libname, pkgname): PROJ versions differ: lwgeom has 9.1.0 sf has
+#> 9.6.2
+#> Spherical geometry (s2) switched off
+conus <- AOI::aoi_get(state = "conus") |> st_transform(5070)
+tiles <- make_conus_grid(st_union(conus), cell_km = 100)  
+
+if (!is.null(res)) {
+  ggplot2::ggplot() +
+    ggplot2::geom_sf(data = res, alpha = 0.15, size = 0.25) +
+    ggplot2::geom_sf(data = tiles, fill = NA, color = "brown", size = 0.2) +
+    ggplot2::labs(title = "Reservoirs", subtitle = "EPSG:5070",
+         x = NULL, y = NULL) +
+    ggplot2::theme_minimal()
+} else {
+  plot.new(); title("Dam points plot skipped (no X/Y)")
+}
+```
 
 <img src="man/figures/README-quick-map-1.png" width="75%" />
 
@@ -192,7 +223,48 @@ These provide strong geometry/topology anchors.
 
 ## Appendix: Version 1.0 plots
 
-<img src="man/figures/README-stub-metrics-1.png" width="75%" /><img src="man/figures/README-stub-metrics-2.png" width="75%" /><img src="man/figures/README-stub-metrics-3.png" width="75%" />
+``` r
+if (exists("res") && nrow(res)) {
+  p1 <- ggplot2::ggplot(res, ggplot2::aes(x = realization_snap_m)) +
+    ggplot2::geom_histogram(bins = 50) +
+    ggplot2::labs(title = "Snap distance (m)") + ggplot2::theme_minimal()
+
+  p2 <- ggplot2::ggplot(res, ggplot2::aes(x = realization_jw)) +
+    ggplot2::geom_histogram(bins = 50) +
+    ggplot2::labs(title = "Name similarity (JW)") + ggplot2::theme_minimal()
+
+  p3 <- ggplot2::ggplot(res, ggplot2::aes(x = n)) +
+    ggplot2::geom_histogram(binwidth = 1) +
+    ggplot2::scale_x_continuous(breaks = 0:10) +
+    ggplot2::labs(title = "Supporting contexts per dam (n)") + ggplot2::theme_minimal()
+
+  print(p1); print(p2); print(p3)
+}
+```
+
+<img src="man/figures/README-stub-metrics-1.png" width="75%" />
+
+    #> Warning: Removed 54654 rows containing non-finite outside the scale range
+    #> (`stat_bin()`).
+
+<img src="man/figures/README-stub-metrics-2.png" width="75%" /><img src="man/figures/README-stub-metrics-3.png" width="75%" />
+
+``` r
+if (exists("res") && nrow(res)) {
+  ctx_cols <- c("gnis","resops","goodd","nwm","osm_ww_poly","osm_ww_lines",
+                "osm_dam_lines","ref_fab_fp","ref_fab_wb","ref_int","osm_int","nid")
+  have <- intersect(ctx_cols, names(res))
+  if (length(have)) {
+    long <- tidyr::pivot_longer(as.data.frame(res), dplyr::all_of(have), names_to = "context", values_to = "id")
+    long$has <- !is.na(long$id)
+    ggplot2::ggplot(long, ggplot2::aes(x = context, fill = has)) +
+      ggplot2::geom_bar() +
+      ggplot2::coord_flip() +
+      ggplot2::labs(title = "Context coverage (count of dams with a match)", y = "count", x = NULL) +
+      ggplot2::theme_minimal()
+  }
+}
+```
 
 <img src="man/figures/README-stub-by-context-1.png" width="75%" />
 
